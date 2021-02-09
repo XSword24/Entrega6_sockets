@@ -3,24 +3,44 @@ const user = require("./cmds_user.js");
 const quiz = require("./cmds_quiz.js");
 const favs = require("./cmds_favs.js");
 const readline = require('readline');
+var net = require('net');
+var port = process.argv[3]|| 8080;
+var host = process.argv[2] || "localhost";
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  prompt: "> "
-});
-rl.log = (msg) => console.log(msg);  // Add log to rl interface
-rl.questionP = function (string) {   // Add questionP to rl interface
-  return new Promise ( (resolve) => {
-    this.question(`  ${string}: `, (answer) => resolve(answer.trim()))
-  })
-};
 
-rl.prompt();
+var server= net.createServer(function(socket){
+  //let clients = [];
+  //clients.push(socket);
+  //socket.write('Echo Server: ');
+
+  /*socket.on('data', function(data){
+    if(data === "end"){
+      var i = clientes.indexOf(socket);
+      clients.splice(i,1);
+    }
+    socket.write('Tarta ponte con el TFM');
+  })*/
+
+  const rl = readline.createInterface({
+    input: socket,
+    output: socket,
+    prompt: "> "
+  });
+
+  rl.log = (msg) => socket.write( msg+"\n");  // Add log to rl interface
+  //rl.questionP = (string) => socket.questionP(string);  
+  rl.questionP = async function (string) {   // Add questionP to rl interface
+    return new Promise ( (resolve) => {
+      this.question(`  ${string}: `, (answer) => resolve(answer.trim()))
+    })
+  };
+  
+  rl.prompt();
 
 rl.on('line', async (line) => {
+
   try{
-    let cmd = line.trim()
+    let cmd =line.trim()
 
     if      ('' ===cmd)   {}
     else if ('h' ===cmd)  { user.help(rl);}
@@ -41,11 +61,18 @@ rl.on('line', async (line) => {
     else if (['cf', 'fc'].includes(cmd))      { await favs.create(rl);}
     else if (['df', 'fd'].includes(cmd))      { await favs.delete(rl);}
 
-    else if ('e'===cmd)  { rl.log('Bye!'); process.exit(0);}
+    else if ('e'===cmd)  { rl.log('Bye!'); socket.destroy();}
     else                 {  rl.log('UNSUPPORTED COMMAND!');
                             user.help(rl);
                          };
     } catch (err) { rl.log(`  ${err}`);}
-    finally       { rl.prompt(); }
+    //finally       { rl.prompt(); }
   });
 
+
+})
+
+
+
+
+server.listen(port);
